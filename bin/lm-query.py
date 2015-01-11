@@ -35,22 +35,52 @@ TO DOs (improvements):
 ## read in command line arguments
 import sys
 
+def prob(seq, model):
+
+    if seq in model:
+
+        return (model[seq][0], len(seq))
+    elif len(seq) == 1:   #this is an OOV, it isn't in the model, and is one long
+        return (model[("<unk>",)][0],0) #return 0 for order if OOV
+    elif seq[:len(seq)-1] in model:
+
+        pr=prob(seq[1:], model)
+        return (model[seq[:len(seq)-1]][1] + pr[0], pr[1])
+    else:
+
+        return prob(seq[1:], model)
+
+def prob_sentence(sentence, order, model):
+    total=0
+    for i in range(1,len(sentence)-1):
+        if i < order:
+            pr=prob(sentence[:i+1], model)
+
+        else:
+            pr=prob(sentence[i-order+1:i+1],model)
+        s=sentence[i]+" "+str(pr[0])+" "+str(pr[1])+"\t"
+        sys.stdout.write(s)
+        total+=pr[0]
+    sys.stdout.write("Total: "+str(total)+"\n")
+    return total
+
 # check number of arguments (need exactly 1)
 if len(sys.argv) != 2:
-    print "Usage: ./lm-query.py lm.arpa\nEnter -help for more information"
+    print "Usage: ./lm-query.py lm.arpa\n Enter --help for more information"
     sys.exit(1)
 
 # check first argument
-if sys.argv[1] == "-version":
+if sys.argv[1] == "--version":
     ## TO DO version info
     sys.exit(0)
-elif sys.argv[1] == "-help":
+elif sys.argv[1] == "--help":
     ## TO DO help info
     sys.exit(0)
 else:
     arpa_file = sys.argv[1]
 
 # TO DO check input a bit more
+
 
 
 ## read in and store arpa model -- currently dictionary {ngram:(prob, backoff)}
@@ -91,19 +121,60 @@ with open(arpa_file, 'r') as file:
                     
                     # store n-grams and back-off in dictionary
                     if len(split_line) == 3:
-                        arpa_model[split_line[1]] = (float(split_line[0]), float(split_line[2]))
+                        arpa_model[tuple(split_line[1].split())] = (float(split_line[0]), float(split_line[2]))
                     # careful -- highest order doesn't have back-off!
                     elif len(split_line) == 2:
                         # use dummy value (100?) instead TO DO
-                        arpa_model[split_line[1]] = (float(split_line[0]), 100.0)
+                        arpa_model[tuple(split_line[1].split())] = (float(split_line[0]), 100.0)
                         # TO DO actually check that highest order
                     else:
                         print "Unexpected number of arguments in a line!"
+    print("done with arpa")
+
+
+
+## read in test sentence(s) from stdin and process it
+
+
+
+
+to_process="" # variable holding the text waiting to be processed
+total=0 #variable holding total of log10 probs
+while True:
+    line=sys.stdin.readline()
+    if line == "":
+        break # exit for reading a file
+    if line.strip("\n") =="exit":
+        break  #exit for console input
+    else:
+        to_process+=line.replace("\n"," ")
+        #processing is done sentence by sentence
+        s, punct, rest = to_process.partition(".")  # TO DO should be done with regex for all end of sentence punct
+        if punct=="":  #there was no end of sentence in this line
+                continue
+        while rest != "": #processing all sentences in buffer
+            sentence="<s> "+s+" "+punct+" </s>"
+            sentence=sentence.lower()
+            to_process=rest
+            total+=prob_sentence(tuple(sentence.split()),position,arpa_model)
+            s, punct, rest = to_process.partition(".")
+
+#process what is left in buffer
+sentence="<s> "+to_process
+total+=prob_sentence(tuple(sentence.split()),position,arpa_model)
+
+
+#TO DO calculate perplexity
+
+
+
 
 ## TESTING (SANITY CHECKS)
 #print "probability of the:", arpa_model["the"][0]
 #print "backoff of i am at:", arpa_model["i am at"][1]
 #print "highest order:", position
+#print "probabiblity of compared:",  prob(("<s>","that","number", "compared"),arpa_model)
+#print prob_sentence(tuple("<s> that number compared with about".split()),position,arpa_model)
 
 ## read in sentences from stdin
 # assume 1 sentence per line
