@@ -14,26 +14,26 @@ Allows for arbitrary length n-grams
 Required command-line argument: name of ARPA file
 
 TO DOs (must have):
-    1. allow command-line arguments like -help, -version (AC)
-    2. read in sentences from stdin (KN)
-        a. process them (capitalization, punctuation, sentence markers, split words)
-        b. output log10 probabilities to stdout (arbitrary length of n-gram)
-    3. output total perplexity (2 -- seen and unseen) to stderr (AK)
-    4. write the README.md file (AK)
-    5. add this script to a bin file on github
-    6. check this works on Python 3 (I used 2.7 to write it)
+    1. output total perplexity (2 -- seen and unseen) to stderr (AK)
+    2. write the README.md file (AK)
 
 TO DOs (improvements):
-    1. more checking of argv
+    1. more checking of input
     2. store arpa model as a trie instead of a dictionary
-    3. make the reading in of the arpa model more portable
+    3. make the reading in of the arpa model more portable 
+        (ex. check highest n against n-gram counts)
     4. what to do about highest order (no back-off)? -- dummy value?
     5. check that the highest order we get is what is expected when reading in model
     6. speed up reading in of model
 """
 
-## read in command line arguments
+## will need to read in command line arguments
 import sys
+
+## strings containing relevant meta info
+CURRENT_VERSION = "1.3"
+USAGE_INFO = "Usage: ./lm-query.py lm.arpa"
+REPO_URL = "https://github.com/fatalinha/LM_Assignment2"
 
 def prob(seq, model):
 
@@ -64,23 +64,28 @@ def prob_sentence(sentence, order, model):
     sys.stdout.write("Total: "+str(total)+"\n")
     return total
 
+## argument checking
 # check number of arguments (need exactly 1)
 if len(sys.argv) != 2:
-    print "Usage: ./lm-query.py lm.arpa\n Enter --help for more information"
+    print(USAGE_INFO)
+    print("Enter --help for more information")
     sys.exit(1)
 
-# check first argument
-if sys.argv[1] == "--version":
+# check argument
+elif sys.argv[1] in ("--version", "-v"):
     ## TO DO version info
+    print("QueLMy version " + CURRENT_VERSION)
     sys.exit(0)
-elif sys.argv[1] == "--help":
-    ## TO DO help info
+elif sys.argv[1] in ("--help", "-h"):
+    ## print out help info
+    print("Language model querying software\n")
+    print(USAGE_INFO)
+    print("Reads in UTF-8 sentences (one per line) from stdin")
+    print("Outputs log10 probabilities of each word based on lm.arpa\n")
+    print("See " + REPO_URL + " for more information")
     sys.exit(0)
 else:
     arpa_file = sys.argv[1]
-
-# TO DO check input a bit more
-
 
 
 ## read in and store arpa model -- currently dictionary {ngram:(prob, backoff)}
@@ -93,7 +98,6 @@ with open(arpa_file, 'r') as file:
     position = -1
     
     # read in line by line
-    # TO DO implement as a trie later
     for line in file:
         # ignore blank lines
         if line.strip():
@@ -111,7 +115,6 @@ with open(arpa_file, 'r') as file:
                     position += 1
                 # otherwise do nothing
             
-           
             # other lines have data that we wanna keep
             else:
                 # ignore if we haven't seen \data\ line, also ignore n-gram counts
@@ -124,20 +127,13 @@ with open(arpa_file, 'r') as file:
                         arpa_model[tuple(split_line[1].split())] = (float(split_line[0]), float(split_line[2]))
                     # careful -- highest order doesn't have back-off!
                     elif len(split_line) == 2:
-                        # use dummy value (100?) instead TO DO
+                        # use dummy value (100) instead
                         arpa_model[tuple(split_line[1].split())] = (float(split_line[0]), 100.0)
-                        # TO DO actually check that highest order
                     else:
-                        print "Unexpected number of arguments in a line!"
-    print("done with arpa")
-
+                        print("Unexpected number of arguments in a line!")
 
 
 ## read in test sentence(s) from stdin and process it
-
-
-
-
 to_process="" # variable holding the text waiting to be processed
 total=0 #variable holding total of log10 probs
 while True:
@@ -164,33 +160,15 @@ sentence="<s> "+to_process
 total+=prob_sentence(tuple(sentence.split()),position,arpa_model)
 
 
-#TO DO calculate perplexity
+#TO DO calculate perplexity and write to stderr
 
 
 
 
 ## TESTING (SANITY CHECKS)
-#print "probability of the:", arpa_model["the"][0]
-#print "backoff of i am at:", arpa_model["i am at"][1]
-#print "highest order:", position
-#print "probabiblity of compared:",  prob(("<s>","that","number", "compared"),arpa_model)
-#print prob_sentence(tuple("<s> that number compared with about".split()),position,arpa_model)
+#print("probability of the:", arpa_model["the"][0])
+#print("backoff of i am at:", arpa_model["i am at"][1])
+#print("highest order:", position)
+#print("probabiblity of compared:",  prob(("<s>","that","number", "compared"),arpa_model))
+#print(prob_sentence(tuple("<s> that number compared with about".split()),position,arpa_model))
 
-## read in sentences from stdin
-# assume 1 sentence per line
-# insert the <s> and </s> markers
-# also need to normalize (capitalization, punctuation, etc.)
-#for line in sys.stdin:
-    # word by word
-    # calculate the log 10 probabilities
-        # if n-gram exists, use that
-        # otherwise, sum probability of the word + backoff weights
-        # remember to  deal with OOV
-        # remember to deal with end of sentence markers
-    # write to stdout
-        # format: word=index length-of-history log10-probability
-#    pass
-
-## calculate perplexity and write to std error
-
-# TO DO note that position variable holds highest n-gram
