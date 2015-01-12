@@ -36,7 +36,8 @@ USAGE_INFO = "Usage: ./lm-query.py lm.arpa"
 REPO_URL = "https://github.com/fatalinha/LM_Assignment2"
 
 def prob(seq, model):
-
+    """ calculates probability for the last element in seq
+     n-gram order is the length of seq"""
     if seq in model:
 
         return (model[seq][0], len(seq))
@@ -52,16 +53,21 @@ def prob(seq, model):
 
 def prob_sentence(sentence, order, model):
     total=0
-    for i in range(1,len(sentence)-1):
+    OOVs=0
+    print(sentence)
+    for i in range(1,len(sentence)):
+
         if i < order:
             pr=prob(sentence[:i+1], model)
 
         else:
             pr=prob(sentence[i-order+1:i+1],model)
-        s=sentence[i]+" "+str(pr[0])+" "+str(pr[1])+"\t"
+        s=sentence[i]+" "+str(pr[1])+" "+str(pr[0])+"\t"
         sys.stdout.write(s)
         total+=pr[0]
-    sys.stdout.write("Total: "+str(total)+"\n")
+        if pr[1] == 0:
+            OOVs+=1
+    sys.stdout.write("Total: "+str(total)+"\t"+"OOVS:"+str(OOVs)+"\n")
     return total
 
 ## argument checking
@@ -136,6 +142,7 @@ with open(arpa_file, 'r') as file:
 ## read in test sentence(s) from stdin and process it
 to_process="" # variable holding the text waiting to be processed
 total=0 #variable holding total of log10 probs
+num_of_words=0 #number of all words
 while True:
     line=sys.stdin.readline()
     if line == "":
@@ -151,19 +158,26 @@ while True:
         while rest != "": #processing all sentences in buffer
             sentence="<s> "+s+" "+punct+" </s>"
             sentence=sentence.lower()
+            sentence=sentence.split()
+            num_of_words+=len(sentence)-1 #substract 1, because <s> doesn't have prob
             to_process=rest
-            total+=prob_sentence(tuple(sentence.split()),position,arpa_model)
+            total+=prob_sentence(tuple(sentence),position,arpa_model)
+            print(total)
             s, punct, rest = to_process.partition(".")
 
 #process what is left in buffer
-sentence="<s> "+to_process
-total+=prob_sentence(tuple(sentence.split()),position,arpa_model)
+if to_process !=" ":
+    sentence="<s> "+to_process
+    sentence=sentence.lower()
+    sentence=sentence.split()
+    num_of_words+=len(sentence)-1 #substract 1, because <s> doesn't have prob
+    total+=prob_sentence(tuple(sentence),position,arpa_model)
 
 
-#TO DO calculate perplexity and write to stderr
+#calculate perplexity and write to stderr
 
-
-
+perplexity=2**(total/num_of_words)
+sys.stderr.write("perplexity: "+str(perplexity)+"\n")
 
 ## TESTING (SANITY CHECKS)
 #print("probability of the:", arpa_model["the"][0])
