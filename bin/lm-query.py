@@ -13,10 +13,6 @@ Outputs log10 probabilities of each word to stdout
 Allows for arbitrary length n-grams
 Required command-line argument: name of ARPA file
 
-TO DOs (must have):
-    1. output total perplexity (2 -- seen and unseen) to stderr (AK)
-    2. write the README.md file (AK)
-
 TO DOs (improvements):
     1. more checking of input
     2. store arpa model as a trie instead of a dictionary
@@ -32,8 +28,13 @@ import sys
 
 ## strings containing relevant meta info
 CURRENT_VERSION = "1.3"
-USAGE_INFO = "Usage: ./lm-query.py lm.arpa"
+USAGE_INFO = "Usage: ./lm-query.py lm.arpa\n"
+USAGE_INFO +="version\t--v\tDisplay version of QueLMy and exit.\n"
+USAGE_INFO += "-help\t--h\tPrint this help.\n"
+USAGE_INFO +="-lm.arpa\tName of the ARPA file\n"
+USAGE_INFO +="exit\t\tType to exit "
 REPO_URL = "https://github.com/fatalinha/LM_Assignment2"
+COPYRIGHT = "Copyright (C), 2015, Currey A., Naszadi K., Karakanta A.\n""This is free software: you are free to change and redistribute it.\n""There is NO WARRANTY, to the extent permitted by law."
 
 def prob(seq, model):
     """ calculates probability for the last element in seq
@@ -79,8 +80,9 @@ if len(sys.argv) != 2:
 
 # check argument
 elif sys.argv[1] in ("--version", "-v"):
-    ## TO DO version info
+    ## Version info
     print("QueLMy version " + CURRENT_VERSION)
+    print(COPYRIGHT)
     sys.exit(0)
 elif sys.argv[1] in ("--help", "-h"):
     ## print out help info
