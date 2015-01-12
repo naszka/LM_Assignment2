@@ -12,8 +12,8 @@ The software allows for arbitrary n-gram lengths, depending on the n-gram length
 
 Usage
 =====
-Run:  
-        `bin/lm-query.py lm.arpa` where lm.arpa is the name of the ARPA file.
+Run: 
+        `bin/lm-query.py lm.arpa`  where lm.arpa is the name of the ARPA file.
 
 The query text can then be typed or read in from a file. 
 In the first case, add a period (.) to the end of the sentence.  
