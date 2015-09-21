@@ -4,7 +4,7 @@
 """
 Created on Sun Jan  4 10:01:17 2015
 
-@author: annacurrey
+@author: annacurrey, naszka, fatalinha
 
 Executable file for statistical language modeling assignment 2
 
@@ -55,7 +55,7 @@ def prob(seq, model):
 def prob_sentence(sentence, order, model):
     total=0
     OOVs=0
-    print(sentence)
+    
     for i in range(1,len(sentence)):
 
         if i < order:
@@ -115,7 +115,7 @@ def read_arpa(arpa_file):
 							arpa_model[tuple(split_line[1].split())] = (float(split_line[0]), 100.0)
 						else:
 							print("Unexpected number of arguments in a line!")
-	return arpa_model
+	return arpa_model, position
 
 def main():
 	## argument checking
@@ -141,7 +141,7 @@ def main():
 		sys.exit(0)
 	else:
 		arpa_file = sys.argv[1]
-		arpa_model=read_arpa(arpa_file)
+		arpa_model, order=read_arpa(arpa_file)
 		
 	## read in test sentence(s) from stdin and process it
 	to_process="" # variable holding the text waiting to be processed
@@ -165,7 +165,7 @@ def main():
 				sentence=sentence.split()
 				num_of_words+=len(sentence)-1 #substract 1, because <s> doesn't have prob
 				to_process=rest
-				total+=prob_sentence(tuple(sentence),position,arpa_model)
+				total+=prob_sentence(tuple(sentence),order,arpa_model)
 				print(total)
 				s, punct, rest = to_process.partition(".")
 
@@ -175,7 +175,7 @@ def main():
 		sentence=sentence.lower()
 		sentence=sentence.split()
 		num_of_words+=len(sentence)-1 #substract 1, because <s> doesn't have prob
-		total+=prob_sentence(tuple(sentence),position,arpa_model)
+		total+=prob_sentence(tuple(sentence),order,arpa_model)
 
 
 	#calculate perplexity and write to stderr
