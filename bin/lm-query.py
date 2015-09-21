@@ -70,116 +70,121 @@ def prob_sentence(sentence, order, model):
             OOVs+=1
     sys.stdout.write("Total: "+str(total)+"\t"+"OOVS:"+str(OOVs)+"\n")
     return total
-
-## argument checking
-# check number of arguments (need exactly 1)
-if len(sys.argv) != 2:
-    print(USAGE_INFO)
-    print("Enter --help for more information")
-    sys.exit(1)
-
-# check argument
-elif sys.argv[1] in ("--version", "-v"):
-    ## Version info
-    print("QueLMy version " + CURRENT_VERSION)
-    print(COPYRIGHT)
-    sys.exit(0)
-elif sys.argv[1] in ("--help", "-h"):
-    ## print out help info
-    print("Language model querying software\n")
-    print(USAGE_INFO)
-    print("Reads in UTF-8 sentences (one per line) from stdin")
-    print("Outputs log10 probabilities of each word based on lm.arpa\n")
-    print("See " + REPO_URL + " for more information")
-    sys.exit(0)
-else:
-    arpa_file = sys.argv[1]
-
-
-## read in and store arpa model -- currently dictionary {ngram:(prob, backoff)}
-arpa_model = {}
-
-# open the arpa file
-with open(arpa_file, 'r') as file:
-    # keep track of where we are 
-    # -1 is before any n-grams, 0 is n-gram counts, 1 is 1-grams, etc.
-    position = -1
     
-    # read in line by line
-    for line in file:
-        # ignore blank lines
-        if line.strip():
-            # lines that start with backslashes don't have data
-            if line[0] == "\\":
-                # \data\ line lets us know we can start (n-gram counts)
-                if line.strip() == "\\data\\":
-                    position += 1
-                # \end\ line tells us we are at end of file (don't increment)
-                elif line.strip() == "\\end\\":
-                    pass
-                # otherwise we'll be at the n-grams
-                # want to make sure we've actually seen the data line as well
-                elif position >= 0:
-                    position += 1
-                # otherwise do nothing
-            
-            # other lines have data that we wanna keep
-            else:
-                # ignore if we haven't seen \data\ line, also ignore n-gram counts
-                if position >= 1:
-                    # split based on tab space
-                    split_line = line.split("\t")
-                    
-                    # store n-grams and back-off in dictionary
-                    if len(split_line) == 3:
-                        arpa_model[tuple(split_line[1].split())] = (float(split_line[0]), float(split_line[2]))
-                    # careful -- highest order doesn't have back-off!
-                    elif len(split_line) == 2:
-                        # use dummy value (100) instead
-                        arpa_model[tuple(split_line[1].split())] = (float(split_line[0]), 100.0)
-                    else:
-                        print("Unexpected number of arguments in a line!")
+def read_arpa(arpa_file):
+	## read in and store arpa model -- currently dictionary {ngram:(prob, backoff)}
+	arpa_model = {}
+
+	# open the arpa file
+	with open(arpa_file, 'r') as file:
+		# keep track of where we are 
+		# -1 is before any n-grams, 0 is n-gram counts, 1 is 1-grams, etc.
+		position = -1
+		
+		# read in line by line
+		for line in file:
+			# ignore blank lines
+			if line.strip():
+				# lines that start with backslashes don't have data
+				if line[0] == "\\":
+					# \data\ line lets us know we can start (n-gram counts)
+					if line.strip() == "\\data\\":
+						position += 1
+					# \end\ line tells us we are at end of file (don't increment)
+					elif line.strip() == "\\end\\":
+						pass
+					# otherwise we'll be at the n-grams
+					# want to make sure we've actually seen the data line as well
+					elif position >= 0:
+						position += 1
+					# otherwise do nothing
+				
+				# other lines have data that we wanna keep
+				else:
+					# ignore if we haven't seen \data\ line, also ignore n-gram counts
+					if position >= 1:
+						# split based on tab space
+						split_line = line.split("\t")
+						
+						# store n-grams and back-off in dictionary
+						if len(split_line) == 3:
+							arpa_model[tuple(split_line[1].split())] = (float(split_line[0]), float(split_line[2]))
+						# careful -- highest order doesn't have back-off!
+						elif len(split_line) == 2:
+							# use dummy value (100) instead
+							arpa_model[tuple(split_line[1].split())] = (float(split_line[0]), 100.0)
+						else:
+							print("Unexpected number of arguments in a line!")
+	return arpa_model
+
+def main():
+	## argument checking
+	# check number of arguments (need exactly 1)
+	if len(sys.argv) != 2:
+		print(USAGE_INFO)
+		print("Enter --help for more information")
+		sys.exit(1)
+
+	# check argument
+	elif sys.argv[1] in ("--version", "-v"):
+		## Version info
+		print("QueLMy version " + CURRENT_VERSION)
+		print(COPYRIGHT)
+		sys.exit(0)
+	elif sys.argv[1] in ("--help", "-h"):
+		## print out help info
+		print("Language model querying software\n")
+		print(USAGE_INFO)
+		print("Reads in UTF-8 sentences (one per line) from stdin")
+		print("Outputs log10 probabilities of each word based on lm.arpa\n")
+		print("See " + REPO_URL + " for more information")
+		sys.exit(0)
+	else:
+		arpa_file = sys.argv[1]
+		arpa_model=read_arpa(arpa_file)
+		
+	## read in test sentence(s) from stdin and process it
+	to_process="" # variable holding the text waiting to be processed
+	total=0 #variable holding total of log10 probs
+	num_of_words=0 #number of all words
+	while True:
+		line=sys.stdin.readline()
+		if line == "":
+			break # exit for reading a file
+		if line.strip("\n") =="exit":
+			break  #exit for console input
+		else:
+			to_process+=line.replace("\n"," ")
+			#processing is done sentence by sentence
+			s, punct, rest = to_process.partition(".")  # TO DO should be done with regex for all end of sentence punct
+			if punct=="":  #there was no end of sentence in this line
+					continue
+			while rest != "": #processing all sentences in buffer
+				sentence="<s> "+s+" "+punct+" </s>"
+				sentence=sentence.lower()
+				sentence=sentence.split()
+				num_of_words+=len(sentence)-1 #substract 1, because <s> doesn't have prob
+				to_process=rest
+				total+=prob_sentence(tuple(sentence),position,arpa_model)
+				print(total)
+				s, punct, rest = to_process.partition(".")
+
+	#process what is left in buffer
+	if to_process !=" ":
+		sentence="<s> "+to_process
+		sentence=sentence.lower()
+		sentence=sentence.split()
+		num_of_words+=len(sentence)-1 #substract 1, because <s> doesn't have prob
+		total+=prob_sentence(tuple(sentence),position,arpa_model)
 
 
-## read in test sentence(s) from stdin and process it
-to_process="" # variable holding the text waiting to be processed
-total=0 #variable holding total of log10 probs
-num_of_words=0 #number of all words
-while True:
-    line=sys.stdin.readline()
-    if line == "":
-        break # exit for reading a file
-    if line.strip("\n") =="exit":
-        break  #exit for console input
-    else:
-        to_process+=line.replace("\n"," ")
-        #processing is done sentence by sentence
-        s, punct, rest = to_process.partition(".")  # TO DO should be done with regex for all end of sentence punct
-        if punct=="":  #there was no end of sentence in this line
-                continue
-        while rest != "": #processing all sentences in buffer
-            sentence="<s> "+s+" "+punct+" </s>"
-            sentence=sentence.lower()
-            sentence=sentence.split()
-            num_of_words+=len(sentence)-1 #substract 1, because <s> doesn't have prob
-            to_process=rest
-            total+=prob_sentence(tuple(sentence),position,arpa_model)
-            print(total)
-            s, punct, rest = to_process.partition(".")
+	#calculate perplexity and write to stderr
 
-#process what is left in buffer
-if to_process !=" ":
-    sentence="<s> "+to_process
-    sentence=sentence.lower()
-    sentence=sentence.split()
-    num_of_words+=len(sentence)-1 #substract 1, because <s> doesn't have prob
-    total+=prob_sentence(tuple(sentence),position,arpa_model)
+	perplexity=2**(total/num_of_words)
+	sys.stderr.write("perplexity: "+str(perplexity)+"\n")
+	return 0
 
 
-#calculate perplexity and write to stderr
-
-perplexity=2**(total/num_of_words)
-sys.stderr.write("perplexity: "+str(perplexity)+"\n")
 
 ## TESTING (SANITY CHECKS)
 #print("probability of the:", arpa_model["the"][0])
