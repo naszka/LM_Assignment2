@@ -183,7 +183,9 @@ def main():
 	perplexity=2**(total/num_of_words)
 	sys.stderr.write("perplexity: "+str(perplexity)+"\n")
 	return 0
-
+	
+if __name__ == '__main__':
+	main()
 
 
 ## TESTING (SANITY CHECKS)
